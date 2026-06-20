@@ -9,7 +9,7 @@ const authUser = async (req, res) => {
   const { facultyId, password } = req.body;
 
   try {
-    const { rows } = await query('SELECT * FROM faculty WHERE "facultyId" = $1', [facultyId]);
+    const { rows } = await query('SELECT * FROM faculty WHERE LOWER("facultyId") = LOWER($1)', [facultyId]);
     const user = rows[0];
 
     if (user && (await bcrypt.compare(password, user.password))) {
