@@ -2,24 +2,40 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const AdminTimetables = () => {
   const [allTimetables, setAllTimetables] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAllTimetables = async () => {
-    try {
-      const { data } = await api.get('/timetable/all');
-      setAllTimetables(data);
-    } catch (error) {
-      toast.error('Failed to load timetables');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+    let pollTimer;
+
+    const fetchAllTimetables = async () => {
+      try {
+        const { data } = await api.get('/timetable/all');
+        if (!isMounted) return;
+        setAllTimetables(data);
+        setLoading(false);
+
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchAllTimetables, 10000);
+      } catch (error) {
+        if (!isMounted) return;
+        setLoading(true);
+        
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchAllTimetables, 3000);
+      }
+    };
+    
     fetchAllTimetables();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(pollTimer);
+    };
   }, []);
 
   const containerVariants = {
@@ -43,7 +59,11 @@ const AdminTimetables = () => {
   }, {});
 
   if (loading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>Loading timetables...</div>;
+    return (
+      <div style={{ maxWidth: '1200px', margin: '0 auto', paddingTop: '2rem' }}>
+        <SkeletonLoader type="timetable" />
+      </div>
+    );
   }
 
   return (

@@ -1,4 +1,5 @@
 import { query } from '../config/pgClient.js';
+import { notifyFaculty, notifyAdmins } from '../utils/notify.js';
 
 // @desc    Create/Upload timetable entry
 // @route   POST /api/timetable
@@ -16,6 +17,9 @@ const createTimetableEntry = async (req, res) => {
       [facultyId, day, period, subject, section, room]
     );
     const entry = rows[0];
+    
+    await notifyFaculty(facultyId, `Your timetable has been updated by the Admin. (${subject} on ${day}, Period ${period})`, 'Timetable', entry.id);
+    
     res.status(201).json({ ...entry, _id: entry.id, facultyId: entry.faculty_id });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -87,6 +91,9 @@ const createMyTimetableEntry = async (req, res) => {
       [facultyId, day, period, subject, section, room]
     );
     const entry = rows[0];
+    
+    await notifyAdmins(`${req.user.name} added a new class (${subject}) to their timetable on ${day} (Period ${period}).`, 'Timetable', entry.id);
+    
     res.status(201).json({ ...entry, _id: entry.id, facultyId: entry.faculty_id });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -134,6 +141,9 @@ const updateMyTimetableEntry = async (req, res) => {
         const queryText = `UPDATE timetable SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
         values.push(id);
         const { rows: updatedRows } = await query(queryText, values);
+        
+        await notifyAdmins(`${req.user.name} updated their ${updatedRows[0].subject} class on ${updatedRows[0].day} (Period ${updatedRows[0].period}).`, 'Timetable', updatedRows[0].id);
+        
         res.json({ ...updatedRows[0], _id: updatedRows[0].id, facultyId: updatedRows[0].faculty_id });
       } else {
         res.json({ ...timetable, _id: timetable.id, facultyId: timetable.faculty_id });
@@ -163,6 +173,9 @@ const deleteMyTimetableEntry = async (req, res) => {
       }
 
       await query('DELETE FROM timetable WHERE id = $1', [id]);
+      
+      await notifyAdmins(`${req.user.name} removed their ${timetable.subject} class on ${timetable.day} (Period ${timetable.period}).`, 'Timetable');
+      
       res.json({ message: 'Timetable entry removed' });
     } else {
       res.status(404).json({ message: 'Timetable entry not found' });

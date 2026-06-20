@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { query } from '../config/pgClient.js';
+import { notifyFaculty } from '../utils/notify.js';
 
 // @desc    Get all faculty
 // @route   GET /api/faculty
@@ -39,6 +40,9 @@ export const registerFaculty = async (req, res) => {
     'INSERT INTO faculty (name, "facultyId", department, email, password, role) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, name, "facultyId", department, email, role',
     [name, facultyId, department, email, hashedPassword, role || 'Faculty']
   );
+  
+  await notifyFaculty(rows[0].id, 'Welcome to FacultyXchange! Your account has been successfully created.', 'System');
+  
   res.status(201).json({ ...rows[0], _id: rows[0].id });
 };
 
@@ -68,6 +72,9 @@ export const updateFaculty = async (req, res) => {
   const queryText = `UPDATE faculty SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, name, "facultyId", department, email, role`;
   values.push(id);
   const { rows } = await query(queryText, values);
+  
+  await notifyFaculty(rows[0].id, 'Your account details have been updated by the Admin.', 'System');
+  
   res.json({ ...rows[0], _id: rows[0].id });
 };
 

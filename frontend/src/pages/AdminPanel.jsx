@@ -5,12 +5,14 @@ import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, BookOpen, Clock, Edit2, Trash2, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const AdminPanel = () => {
   const { user } = useAuth();
   const [faculties, setFaculties] = useState([]);
   const [substitutes, setSubstitutes] = useState([]);
   const [allTimetables, setAllTimetables] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('faculty');
   const [timetableForm, setTimetableForm] = useState({
     facultyId: '', day: 'Monday', period: '', subject: '', section: '', room: ''
@@ -25,25 +27,47 @@ const AdminPanel = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (isMounted = { current: true }) => {
+    if (user?.role !== 'Admin') return false;
     try {
       const [facRes, subRes, timeRes] = await Promise.all([
         api.get('/faculty'),
         api.get('/substitute/all'),
         api.get('/timetable/all')
       ]);
+      
+      if (!isMounted.current) return false;
       setFaculties(facRes.data);
       setSubstitutes(subRes.data);
       setAllTimetables(timeRes.data);
+      setLoading(false);
+      return true;
     } catch (error) {
-      toast.error('Failed to load admin data');
+      if (!isMounted.current) return false;
+      setLoading(true);
+      return false;
     }
   };
 
   useEffect(() => {
+    let isMounted = { current: true };
+    let pollTimer;
+
+    const poll = async () => {
+      const success = await fetchAdminData(isMounted);
+      if (isMounted.current) {
+        pollTimer = setTimeout(poll, success ? 10000 : 3000);
+      }
+    };
+
     if (user?.role === 'Admin') {
-      fetchAdminData();
+      poll();
     }
+
+    return () => {
+      isMounted.current = false;
+      clearTimeout(pollTimer);
+    };
   }, [user]);
 
   const handleChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -222,6 +246,14 @@ const AdminPanel = () => {
 
   if (user?.role !== 'Admin') {
     return <div style={{ padding: '2rem' }}>Access Denied. Admins only.</div>;
+  }
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1200px', margin: '0 auto', paddingTop: '2rem' }}>
+        <SkeletonLoader type="admin-panel" />
+      </div>
+    );
   }
 
   const containerVariants = {

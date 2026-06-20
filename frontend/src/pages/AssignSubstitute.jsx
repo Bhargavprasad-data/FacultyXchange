@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const AssignSubstitute = () => {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ const AssignSubstitute = () => {
   const [faculties, setFaculties] = useState([]);
   const [myTimetable, setMyTimetable] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   const [formData, setFormData] = useState({
     date: '',
@@ -24,6 +26,9 @@ const AssignSubstitute = () => {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    let pollTimer;
+
     const fetchInitialData = async () => {
       try {
         const [facsRes, timeRes] = await Promise.all([
@@ -31,15 +36,30 @@ const AssignSubstitute = () => {
           api.get(`/timetable/${user._id}`)
         ]);
         
+        if (!isMounted) return;
         // Filter out the current user, allow ANY department
         const eligible = facsRes.data.filter(f => f._id !== user._id);
         setFaculties(eligible);
         setMyTimetable(timeRes.data);
+        setLoading(false);
+
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchInitialData, 10000);
       } catch (error) {
-        toast.error('Failed to load initial data');
+        if (!isMounted) return;
+        setLoading(true);
+        
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchInitialData, 3000);
       }
     };
+    
     fetchInitialData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(pollTimer);
+    };
   }, [user]);
 
   // Update available slots when date changes
@@ -96,6 +116,14 @@ const AssignSubstitute = () => {
       toast.error(error.response?.data?.message || 'Failed to assign substitute');
     }
   };
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '900px', margin: '0 auto', paddingTop: '2rem' }}>
+        <SkeletonLoader type="form" />
+      </div>
+    );
+  }
 
   return (
     <motion.div 

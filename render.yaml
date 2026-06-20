@@ -17,8 +17,9 @@ services:
       - key: NODE_VERSION
         value: 20
       - key: DATABASE_URL
-        sync: false
-        description: PostgreSQL connection string (provided by Render)
+        fromDatabase:
+          name: faculty-db
+          property: connectionString
   # 2. Frontend Static Site (with rewrite rules to prevent 404 on refresh)
   - type: web
     name: faculty-class-exchange-frontend

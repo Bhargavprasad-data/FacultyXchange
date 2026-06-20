@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
+import SkeletonLoader from './SkeletonLoader';
 import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
@@ -12,7 +13,7 @@ const Layout = () => {
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
   if (loading) {
-    return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
+    return <SkeletonLoader type="full" />;
   }
 
   if (!user) {

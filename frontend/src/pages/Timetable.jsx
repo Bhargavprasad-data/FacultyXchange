@@ -4,6 +4,7 @@ import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const Timetable = () => {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ const Timetable = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   const [formData, setFormData] = useState({
     day: 'Monday',
@@ -20,19 +22,40 @@ const Timetable = () => {
     room: ''
   });
 
-  const fetchTimetable = async () => {
+  const fetchTimetable = async (isMounted = { current: true }) => {
     try {
       if (user?._id) {
         const res = await api.get(`/timetable/${user._id}`);
+        if (!isMounted.current) return false;
         setTimetable(res.data);
+        setLoading(false);
+        return true;
       }
+      return false;
     } catch (error) {
-      toast.error('Failed to load timetable');
+      if (!isMounted.current) return false;
+      setLoading(true);
+      return false;
     }
   };
 
   useEffect(() => {
-    fetchTimetable();
+    let isMounted = { current: true };
+    let pollTimer;
+
+    const poll = async () => {
+      const success = await fetchTimetable(isMounted);
+      if (isMounted.current) {
+        pollTimer = setTimeout(poll, success ? 10000 : 3000);
+      }
+    };
+
+    poll();
+
+    return () => {
+      isMounted.current = false;
+      clearTimeout(pollTimer);
+    };
   }, [user]);
 
   const handleChange = (e) => {
@@ -100,6 +123,14 @@ const Timetable = () => {
     acc[day] = timetable.filter(t => t.day === day).sort((a, b) => a.period - b.period);
     return acc;
   }, {});
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1000px', margin: '0 auto', paddingTop: '2rem' }}>
+        <SkeletonLoader type="timetable" />
+      </div>
+    );
+  }
 
   return (
     <motion.div

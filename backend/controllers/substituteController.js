@@ -1,4 +1,5 @@
 import { query } from '../config/pgClient.js';
+import { notifyAdmins } from '../utils/notify.js';
 
 // @desc    Assign a substitute class
 // @route   POST /api/substitute
@@ -36,6 +37,8 @@ const createSubstituteClass = async (req, res) => {
         substituteClass.id
       ]
     );
+
+    await notifyAdmins(`${originalFaculty.name} assigned a substitute class to ${substituteFaculty.name} on ${dateFormatted}.`, 'Substitute', substituteClass.id);
 
     res.status(201).json({
       _id: substituteClass.id,

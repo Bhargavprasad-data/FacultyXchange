@@ -2,25 +2,54 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const History = () => {
   const [substitutes, setSubstitutes] = useState([]);
   const [compensations, setCompensations] = useState([]);
   const [activeTab, setActiveTab] = useState('substitutes');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    let pollTimer;
+
     const fetchHistory = async () => {
       try {
         const subRes = await api.get('/substitute');
         const compRes = await api.get('/compensation');
+        
+        if (!isMounted) return;
         setSubstitutes(subRes.data);
         setCompensations(compRes.data);
+        setLoading(false);
+
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchHistory, 10000);
       } catch (error) {
-        toast.error('Failed to load history');
+        if (!isMounted) return;
+        setLoading(true);
+        
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchHistory, 3000);
       }
     };
+    
     fetchHistory();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(pollTimer);
+    };
   }, []);
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '1000px', margin: '0 auto', paddingTop: '2rem' }}>
+        <SkeletonLoader type="table" />
+      </div>
+    );
+  }
 
   return (
     <motion.div 

@@ -19,9 +19,10 @@ const textVariants = {
   expanded: { opacity: 1, x: 0, display: 'block', transition: { delay: 0.1 } }
 };
 
-const NavItem = ({ to, icon, label, isHovered }) => (
+const NavItem = ({ to, icon, label, isHovered, end }) => (
   <NavLink 
     to={to} 
+    end={end}
     className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
     style={{ textDecoration: 'none' }}
   >
@@ -116,7 +117,7 @@ const Sidebar = ({ onHover }) => {
           <nav className="nav">
             {user?.role === 'Faculty' && (
               <>
-                <NavItem to="/" icon={<Home size={22} />} label="Dashboard" isHovered={isHovered} />
+                <NavItem to="/" icon={<Home size={22} />} label="Dashboard" isHovered={isHovered} end />
                 <NavItem to="/timetable" icon={<CalendarDays size={22} />} label="My Timetable" isHovered={isHovered} />
                 <NavItem to="/assign-substitute" icon={<CalendarMinus2 size={22} />} label="Assign Class" isHovered={isHovered} />
                 <NavItem to="/compensate" icon={<CalendarCheck2 size={22} />} label="Compensation Schedule" isHovered={isHovered} />
@@ -126,7 +127,7 @@ const Sidebar = ({ onHover }) => {
 
             {user?.role === 'Admin' && (
               <>
-                <NavItem to="/admin" icon={<Shield size={22} />} label="Admin Panel" isHovered={isHovered} />
+                <NavItem to="/admin" icon={<Shield size={22} />} label="Admin Panel" isHovered={isHovered} end />
                 <NavItem to="/admin/timetables" icon={<List size={22} />} label="All Timetables" isHovered={isHovered} />
               </>
             )}

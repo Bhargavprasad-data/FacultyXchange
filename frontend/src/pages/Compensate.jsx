@@ -4,12 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const Compensate = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [pendingRequests, setPendingRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
   
   // Timetable of the person who originally helped ME, so I can return the favor
   const [targetTimetable, setTargetTimetable] = useState([]);
@@ -34,20 +36,39 @@ const Compensate = () => {
   }, [compensationDate, targetTimetable]);
 
   useEffect(() => {
+    let isMounted = true;
+    let pollTimer;
+
     const fetchPending = async () => {
       try {
         const { data } = await api.get('/substitute');
+        if (!isMounted) return;
+        
         // Filter to requests where I am the original faculty (I owe them a class)
         const owing = data.filter(d => 
           d.originalFaculty._id === user._id && 
           d.compensationStatus === 'Pending'
         );
         setPendingRequests(owing);
+        setLoading(false);
+
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchPending, 10000);
       } catch (error) {
-        toast.error('Failed to load pending requests');
+        if (!isMounted) return;
+        setLoading(true);
+        
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchPending, 3000);
       }
     };
+    
     fetchPending();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(pollTimer);
+    };
   }, [user]);
 
   const handleSelectRequest = async (e) => {
@@ -95,6 +116,14 @@ const Compensate = () => {
       toast.error(error.response?.data?.message || 'Failed to schedule compensation');
     }
   };
+
+  if (loading) {
+    return (
+      <div style={{ maxWidth: '900px', margin: '0 auto', paddingTop: '2rem' }}>
+        <SkeletonLoader type="form" />
+      </div>
+    );
+  }
 
   return (
     <motion.div 

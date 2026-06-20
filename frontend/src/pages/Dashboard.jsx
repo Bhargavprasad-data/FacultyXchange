@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { BookOpen, Calendar, Clock, ArrowRightLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import SkeletonLoader from '../components/SkeletonLoader';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -13,31 +14,49 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.role === 'Admin') {
-      navigate('/admin');
-      return;
-    }
+    let isMounted = true;
+    let pollTimer;
 
     const fetchDashboardData = async () => {
+      if (user?.role === 'Admin') {
+        navigate('/admin');
+        return;
+      }
       try {
-        if (user.role === 'Faculty') {
+        if (user?.role === 'Faculty') {
           const { data } = await api.get('/balance');
-          setBalance(data);
-          
           const timeRes = await api.get(`/timetable/${user._id}`);
+          
+          if (!isMounted) return;
+          setBalance(data);
           setTimetable(timeRes.data);
         }
-      } catch (error) {
-        console.error('Failed to fetch dashboard data', error);
-      } finally {
+
+        if (!isMounted) return;
         setLoading(false);
+        
+        // Poll every 10s
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchDashboardData, 10000);
+      } catch (error) {
+        if (!isMounted) return;
+        setLoading(true);
+        
+        // Retry every 3s
+        clearTimeout(pollTimer);
+        pollTimer = setTimeout(fetchDashboardData, 3000);
       }
     };
-
+    
     fetchDashboardData();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(pollTimer);
+    };
   }, [user, navigate]);
 
-  if (loading) return <div className="animate-fade-in text-center p-8 text-[var(--text-secondary)]">Loading dashboard...</div>;
+  if (loading) return <SkeletonLoader type="dashboard" count={3} />;
 
   // Render return nothing if Admin, just in case redirect is pending
   if (user?.role === 'Admin') return null;

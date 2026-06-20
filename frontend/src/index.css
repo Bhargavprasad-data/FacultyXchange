@@ -97,6 +97,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 body {
@@ -331,6 +332,30 @@ input, select, textarea {
 
 .animate-fade-in {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Skeleton Loader */
+.skeleton {
+  background-color: #cbd5e1;
+  background-image: linear-gradient(to right, #cbd5e1 0%, #f1f5f9 20%, #cbd5e1 40%, #cbd5e1 100%);
+  background-size: 1000px 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 2s infinite linear;
+  border-radius: var(--radius-md);
+}
+
+[data-theme="dark"] .skeleton {
+  background-color: #1e293b;
+  background-image: linear-gradient(to right, #1e293b 0%, #334155 20%, #1e293b 40%, #1e293b 100%);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
 }
 
 /* Utility layout */

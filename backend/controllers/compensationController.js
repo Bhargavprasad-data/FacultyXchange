@@ -1,4 +1,5 @@
 import { query } from '../config/pgClient.js';
+import { notifyAdmins } from '../utils/notify.js';
 
 // @desc    Schedule/Mark a compensation class
 // @route   POST /api/compensation
@@ -45,6 +46,8 @@ const createCompensationClass = async (req, res) => {
         compensationClass.id
       ]
     );
+
+    await notifyAdmins(`${req.user.name} logged a compensation class on ${dateFormatted}.`, 'Compensation', compensationClass.id);
 
     res.status(201).json({
       _id: compensationClass.id,
