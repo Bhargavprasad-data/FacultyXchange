@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Search, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { Bell, Search, ChevronDown, CheckCircle2, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 
 const TopNav = () => {
   const { user } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef(null);
@@ -60,6 +62,16 @@ const TopNav = () => {
       </div>
 
       <div style={styles.actions}>
+        <motion.button 
+          whileHover={{ scale: 1.1 }} 
+          whileTap={{ scale: 0.95 }}
+          style={styles.iconBtn}
+          onClick={toggleTheme}
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {isDark ? <Sun size={20} color="var(--text-secondary)" /> : <Moon size={20} color="var(--text-secondary)" />}
+        </motion.button>
+
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <motion.button 
             whileHover={{ scale: 1.1 }} 
@@ -138,7 +150,7 @@ const TopNav = () => {
 const styles = {
   header: {
     height: '72px',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'var(--header-bg)',
     backdropFilter: 'blur(12px)',
     borderBottom: '1px solid var(--border-color)',
     display: 'flex',

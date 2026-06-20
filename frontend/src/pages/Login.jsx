@@ -138,7 +138,7 @@ const Login = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label className="form-label" htmlFor="facultyId" style={{ fontSize: '0.9rem', fontWeight: 600 }}>Faculty ID or Admin Username</label>
+              <label className="form-label" htmlFor="facultyId" style={{ fontSize: '0.9rem', fontWeight: 600 }}>Faculty ID</label>
               <input
                 className="form-input"
                 id="facultyId"
@@ -147,7 +147,7 @@ const Login = () => {
                 onChange={(e) => setFacultyId(e.target.value)}
                 required
                 placeholder="e.g. cse001 or admin123"
-                style={{ padding: '0.875rem 1rem', fontSize: '1rem', backgroundColor: '#f8fafc' }}
+                style={{ padding: '0.875rem 1rem', fontSize: '1rem', backgroundColor: 'var(--background-color)' }}
                 autoComplete="username"
               />
             </div>
@@ -163,7 +163,7 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••"
-                  style={{ padding: '0.875rem 1rem', paddingRight: '2.5rem', fontSize: '1rem', backgroundColor: '#f8fafc', width: '100%' }}
+                  style={{ padding: '0.875rem 1rem', paddingRight: '2.5rem', fontSize: '1rem', backgroundColor: 'var(--background-color)', width: '100%' }}
                   autoComplete="current-password"
                 />
                 <button
