@@ -10,8 +10,18 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 import pkg from 'pg';
 const { Pool } = pkg;
 
+const poolConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+      user: process.env.DB_USER,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      password: process.env.DB_PASSWORD,
+      port: 5432,
+    };
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  ...poolConfig,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
