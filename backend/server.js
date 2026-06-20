@@ -17,13 +17,21 @@ import notificationRoutes from './routes/notificationRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.join(__dirname, '.env') });
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.join(__dirname, '.env') });
+}
 
 connectDB();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: 'https://faculty-class-exchange-frontend.onrender.com',
+  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true,
+}));
+app.options('*', cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
