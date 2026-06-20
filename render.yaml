@@ -16,6 +16,8 @@ services:
       - key: JWT_SECRET
         generateValue: true
         description: A secure random key for signing JWT tokens
+      - key: NODE_VERSION
+        value: 20
 
   # 2. Frontend Static Site (with rewrite rules to prevent 404 on refresh)
   - type: web
@@ -32,3 +34,5 @@ services:
       - key: VITE_API_URL
         value: https://faculty-class-exchange-backend.onrender.com/api
         description: URL of your backend API service (replace with your actual backend URL once deployed)
+      - key: NODE_VERSION
+        value: 20
