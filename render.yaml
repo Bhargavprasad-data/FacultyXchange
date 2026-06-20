@@ -10,9 +10,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: MONGO_URI
-        sync: false
-        description: The MongoDB connection string (e.g., from MongoDB Atlas)
+- key: MONGO_URI
+  value: mongodb+srv://<username>:<password>@cluster0.mongodb.net/class-exchange?retryWrites=true&w=majority
+  sync: false
+  description: The MongoDB connection string (e.g., from MongoDB Atlas)
       - key: JWT_SECRET
         generateValue: true
         description: A secure random key for signing JWT tokens
