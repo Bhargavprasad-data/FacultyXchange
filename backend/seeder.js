@@ -21,6 +21,7 @@ const seedData = async () => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('password123', salt);
+    const customAdminHashedPassword = await bcrypt.hash('Bhargav11@prasad', salt);
 
     const users = [
       {
@@ -29,6 +30,22 @@ const seedData = async () => {
         department: 'Admin',
         email: 'admin@college.edu',
         password: hashedPassword,
+        role: 'Admin',
+      },
+      {
+        name: 'Admin Bhargav Upper',
+        facultyId: '23331A4462',
+        department: 'Admin',
+        email: '23331A4462@college.edu',
+        password: customAdminHashedPassword,
+        role: 'Admin',
+      },
+      {
+        name: 'Admin Bhargav Lower',
+        facultyId: '23331a4462',
+        department: 'Admin',
+        email: '23331a4462@college.edu',
+        password: customAdminHashedPassword,
         role: 'Admin',
       },
       {
