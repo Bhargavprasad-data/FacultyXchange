@@ -1,6 +1,8 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
 
@@ -12,7 +14,10 @@ import compensationRoutes from './routes/compensationRoutes.js';
 import balanceRoutes from './routes/balanceRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 connectDB();
 
@@ -28,10 +33,20 @@ app.use('/api/substitute', substituteRoutes);
 app.use('/api/compensation', compensationRoutes);
 app.use('/api/balance', balanceRoutes);
 app.use('/api/notifications', notificationRoutes);
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-app.get('/', (req, res) => {
-  res.send('API is running...');
-});
+  app.get(/.*/, (req, res, next) => {
+    if (req.originalUrl.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.resolve(__dirname, '../frontend', 'dist', 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.send('API is running...');
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
