@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+  const customUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL;
+  if (customUrl) {
+    return customUrl.endsWith('/api') ? customUrl : `${customUrl}/api`;
+  }
+  return import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5000/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:5000/api'),
+  baseURL: getBaseUrl(),
 });
 
 // Add a request interceptor to add the JWT token to headers

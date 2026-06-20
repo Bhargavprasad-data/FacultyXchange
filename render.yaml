@@ -32,9 +32,11 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      - key: VITE_API_URL
-        value: https://faculty-class-exchange-backend.onrender.com/api
-        description: URL of your backend API service (replace with your actual backend URL once deployed)
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: faculty-class-exchange-backend
+          envVarKey: RENDER_EXTERNAL_URL
       - key: NODE_VERSION
         value: 20
 
