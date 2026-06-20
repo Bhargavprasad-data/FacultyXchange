@@ -10,16 +10,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-- key: MONGO_URI
-  value: mongodb+srv://<username>:<password>@cluster0.mongodb.net/class-exchange?retryWrites=true&w=majority
-  sync: false
-  description: The MongoDB connection string (e.g., from MongoDB Atlas)
+
       - key: JWT_SECRET
         generateValue: true
         description: A secure random key for signing JWT tokens
       - key: NODE_VERSION
         value: 20
-
+      - key: DATABASE_URL
+        sync: false
+        description: PostgreSQL connection string (provided by Render)
   # 2. Frontend Static Site (with rewrite rules to prevent 404 on refresh)
   - type: web
     name: faculty-class-exchange-frontend
@@ -37,3 +36,9 @@ services:
         description: URL of your backend API service (replace with your actual backend URL once deployed)
       - key: NODE_VERSION
         value: 20
+
+  - type: postgres
+    name: faculty-db
+    plan: free
+    region: oregon
+    databaseName: faculty_exchange
