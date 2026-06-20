@@ -1,4 +1,4 @@
-import Timetable from '../models/Timetable.js';
+import { query } from '../config/pgClient.js';
 
 // @desc    Create/Upload timetable entry
 // @route   POST /api/timetable
@@ -7,25 +7,16 @@ const createTimetableEntry = async (req, res) => {
   const { facultyId, day, period, subject, section, room } = req.body;
 
   try {
-    const entryExists = await Timetable.findOne({ facultyId, day, period });
-    
-    if (entryExists) {
-      entryExists.subject = subject;
-      entryExists.section = section;
-      entryExists.room = room;
-      const updatedEntry = await entryExists.save();
-      res.status(200).json(updatedEntry);
-    } else {
-      const newEntry = await Timetable.create({
-        facultyId,
-        day,
-        period,
-        subject,
-        section,
-        room,
-      });
-      res.status(201).json(newEntry);
-    }
+    const { rows } = await query(
+      `INSERT INTO timetable (faculty_id, day, period, subject, section, room)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (faculty_id, day, period) 
+       DO UPDATE SET subject = EXCLUDED.subject, section = EXCLUDED.section, room = EXCLUDED.room
+       RETURNING *`,
+      [facultyId, day, period, subject, section, room]
+    );
+    const entry = rows[0];
+    res.status(201).json({ ...entry, _id: entry.id, facultyId: entry.faculty_id });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -35,13 +26,14 @@ const createTimetableEntry = async (req, res) => {
 // @route   GET /api/timetable/:facultyId
 // @access  Private
 const getTimetable = async (req, res) => {
-  const timetable = await Timetable.find({ facultyId: req.params.facultyId }).sort({ day: 1, period: 1 });
-
-  if (timetable) {
-    res.json(timetable);
-  } else {
-    res.status(404);
-    throw new Error('Timetable not found');
+  try {
+    const { rows } = await query(
+      'SELECT * FROM timetable WHERE faculty_id = $1 ORDER BY day, period',
+      [req.params.facultyId]
+    );
+    res.json(rows.map(r => ({ ...r, _id: r.id, facultyId: r.faculty_id })));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -50,9 +42,28 @@ const getTimetable = async (req, res) => {
 // @access  Private/Admin
 const getAllTimetables = async (req, res) => {
   try {
-    const timetables = await Timetable.find({})
-      .populate('facultyId', 'name department email')
-      .sort({ day: 1, period: 1 });
+    const { rows } = await query(
+      `SELECT t.*, f.name, f.department, f.email 
+       FROM timetable t 
+       LEFT JOIN faculty f ON t.faculty_id = f.id 
+       ORDER BY t.day, t.period`
+    );
+    const timetables = rows.map(r => ({
+      _id: r.id,
+      id: r.id,
+      day: r.day,
+      period: r.period,
+      subject: r.subject,
+      section: r.section,
+      room: r.room,
+      facultyId: {
+        _id: r.faculty_id,
+        id: r.faculty_id,
+        name: r.name,
+        department: r.department,
+        email: r.email
+      }
+    }));
     res.json(timetables);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -64,28 +75,19 @@ const getAllTimetables = async (req, res) => {
 // @access  Private/Faculty
 const createMyTimetableEntry = async (req, res) => {
   const { day, period, subject, section, room } = req.body;
-  const facultyId = req.user._id;
+  const facultyId = req.user.id;
 
   try {
-    const entryExists = await Timetable.findOne({ facultyId, day, period });
-    
-    if (entryExists) {
-      entryExists.subject = subject;
-      entryExists.section = section;
-      entryExists.room = room;
-      const updatedEntry = await entryExists.save();
-      res.status(200).json(updatedEntry);
-    } else {
-      const newEntry = await Timetable.create({
-        facultyId,
-        day,
-        period,
-        subject,
-        section,
-        room,
-      });
-      res.status(201).json(newEntry);
-    }
+    const { rows } = await query(
+      `INSERT INTO timetable (faculty_id, day, period, subject, section, room)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (faculty_id, day, period) 
+       DO UPDATE SET subject = EXCLUDED.subject, section = EXCLUDED.section, room = EXCLUDED.room
+       RETURNING *`,
+      [facultyId, day, period, subject, section, room]
+    );
+    const entry = rows[0];
+    res.status(201).json({ ...entry, _id: entry.id, facultyId: entry.faculty_id });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -96,39 +98,51 @@ const createMyTimetableEntry = async (req, res) => {
 // @access  Private/Faculty
 const updateMyTimetableEntry = async (req, res) => {
   const { subject, section, room, day, period } = req.body;
+  const { id } = req.params;
+  const userId = req.user.id;
 
   try {
-    const timetable = await Timetable.findById(req.params.id);
+    const { rows: checkRows } = await query('SELECT * FROM timetable WHERE id = $1', [id]);
+    const timetable = checkRows[0];
 
     if (timetable) {
-      if (timetable.facultyId.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('Not authorized to update this timetable');
+      if (timetable.faculty_id !== userId) {
+        return res.status(401).json({ message: 'Not authorized to update this timetable' });
       }
 
       // Check if trying to change day/period to an existing slot
       if (day && period && (day !== timetable.day || period !== timetable.period)) {
-        const entryExists = await Timetable.findOne({ facultyId: req.user._id, day, period });
-        if (entryExists) {
-          res.status(400);
-          throw new Error('A class is already scheduled for this day and period');
+        const { rows: conflictRows } = await query(
+          'SELECT * FROM timetable WHERE faculty_id = $1 AND day = $2 AND period = $3',
+          [userId, day, period]
+        );
+        if (conflictRows.length) {
+          return res.status(400).json({ message: 'A class is already scheduled for this day and period' });
         }
       }
 
-      timetable.subject = subject || timetable.subject;
-      timetable.section = section || timetable.section;
-      timetable.room = room || timetable.room;
-      timetable.day = day || timetable.day;
-      timetable.period = period || timetable.period;
+      const fields = [];
+      const values = [];
+      let idx = 1;
+      if (subject) { fields.push(`subject = $${idx++}`); values.push(subject); }
+      if (section) { fields.push(`section = $${idx++}`); values.push(section); }
+      if (room) { fields.push(`room = $${idx++}`); values.push(room); }
+      if (day) { fields.push(`day = $${idx++}`); values.push(day); }
+      if (period) { fields.push(`period = $${idx++}`); values.push(period); }
 
-      const updatedTimetable = await timetable.save();
-      res.json(updatedTimetable);
+      if (fields.length > 0) {
+        const queryText = `UPDATE timetable SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${idx} RETURNING *`;
+        values.push(id);
+        const { rows: updatedRows } = await query(queryText, values);
+        res.json({ ...updatedRows[0], _id: updatedRows[0].id, facultyId: updatedRows[0].faculty_id });
+      } else {
+        res.json({ ...timetable, _id: timetable.id, facultyId: timetable.faculty_id });
+      }
     } else {
-      res.status(404);
-      throw new Error('Timetable entry not found');
+      res.status(404).json({ message: 'Timetable entry not found' });
     }
   } catch (error) {
-    res.status(res.statusCode === 200 ? 500 : res.statusCode).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -136,23 +150,25 @@ const updateMyTimetableEntry = async (req, res) => {
 // @route   DELETE /api/timetable/my/:id
 // @access  Private/Faculty
 const deleteMyTimetableEntry = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
   try {
-    const timetable = await Timetable.findById(req.params.id);
+    const { rows } = await query('SELECT * FROM timetable WHERE id = $1', [id]);
+    const timetable = rows[0];
 
     if (timetable) {
-      if (timetable.facultyId.toString() !== req.user._id.toString()) {
-        res.status(401);
-        throw new Error('Not authorized to delete this timetable');
+      if (timetable.faculty_id !== userId) {
+        return res.status(401).json({ message: 'Not authorized to delete this timetable' });
       }
 
-      await Timetable.deleteOne({ _id: timetable._id });
+      await query('DELETE FROM timetable WHERE id = $1', [id]);
       res.json({ message: 'Timetable entry removed' });
     } else {
-      res.status(404);
-      throw new Error('Timetable entry not found');
+      res.status(404).json({ message: 'Timetable entry not found' });
     }
   } catch (error) {
-    res.status(res.statusCode === 200 ? 500 : res.statusCode).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 

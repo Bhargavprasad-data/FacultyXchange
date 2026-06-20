@@ -1,61 +1,73 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Faculty from './models/Faculty.js';
-import connectDB from './config/db.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-connectDB();
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+import { query } from './config/pgClient.js';
+import bcrypt from 'bcryptjs';
 
 const seedData = async () => {
   try {
-    await Faculty.deleteMany();
+    // Clear data from tables
+    await query('DELETE FROM compensation_class');
+    await query('DELETE FROM notification');
+    await query('DELETE FROM substitute_class');
+    await query('DELETE FROM timetable');
+    await query('DELETE FROM faculty');
 
-    const adminUser = {
-      name: 'Admin User',
-      facultyId: 'admin123',
-      department: 'Admin',
-      email: 'admin@college.edu',
-      password: 'password123',
-      role: 'Admin',
-    };
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('password123', salt);
 
-    const cseFaculty1 = {
-      name: 'Dr. John Doe',
-      facultyId: 'cse001',
-      department: 'CSE',
-      email: 'john@college.edu',
-      password: 'password123',
-      role: 'Faculty',
-    };
+    const users = [
+      {
+        name: 'Admin User',
+        facultyId: 'admin123',
+        department: 'Admin',
+        email: 'admin@college.edu',
+        password: hashedPassword,
+        role: 'Admin',
+      },
+      {
+        name: 'Dr. John Doe',
+        facultyId: 'cse001',
+        department: 'CSE',
+        email: 'john@college.edu',
+        password: hashedPassword,
+        role: 'Faculty',
+      },
+      {
+        name: 'Prof. Jane Smith',
+        facultyId: 'cse002',
+        department: 'CSE',
+        email: 'jane@college.edu',
+        password: hashedPassword,
+        role: 'Faculty',
+      },
+      {
+        name: 'Dr. Alice Brown',
+        facultyId: 'ece001',
+        department: 'ECE',
+        email: 'alice@college.edu',
+        password: hashedPassword,
+        role: 'Faculty',
+      }
+    ];
 
-    const cseFaculty2 = {
-      name: 'Prof. Jane Smith',
-      facultyId: 'cse002',
-      department: 'CSE',
-      email: 'jane@college.edu',
-      password: 'password123',
-      role: 'Faculty',
-    };
-    
-    const eceFaculty1 = {
-      name: 'Dr. Alice Brown',
-      facultyId: 'ece001',
-      department: 'ECE',
-      email: 'alice@college.edu',
-      password: 'password123',
-      role: 'Faculty',
-    };
+    for (const u of users) {
+      await query(
+        'INSERT INTO faculty (name, "facultyId", department, email, password, role) VALUES ($1, $2, $3, $4, $5, $6)',
+        [u.name, u.facultyId, u.department, u.email, u.password, u.role]
+      );
+    }
 
-    await Faculty.create(adminUser);
-    await Faculty.create(cseFaculty1);
-    await Faculty.create(cseFaculty2);
-    await Faculty.create(eceFaculty1);
-
-    console.log('Data Imported!');
-    process.exit();
+    console.log('✅ Seed Data Imported successfully!');
+    process.exit(0);
   } catch (error) {
-    console.error(`${error}`);
+    console.error(`❌ Seeding failed: ${error}`);
     process.exit(1);
   }
 };

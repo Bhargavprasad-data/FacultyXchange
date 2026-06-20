@@ -1,15 +1,24 @@
-import Notification from '../models/Notification.js';
+import { query } from '../config/pgClient.js';
 
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
 const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ recipient: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(50); // limit to recent 50
-    
-    res.json(notifications);
+    const { rows } = await query(
+      'SELECT id, recipient_id, message, type, is_read, related_id, created_at FROM notification WHERE recipient_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [req.user.id]
+    );
+    res.json(rows.map(r => ({
+      _id: r.id,
+      id: r.id,
+      recipient: r.recipient_id,
+      message: r.message,
+      type: r.type,
+      isRead: r.is_read,
+      relatedId: r.related_id,
+      createdAt: r.created_at
+    })));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -20,21 +29,34 @@ const getNotifications = async (req, res) => {
 // @access  Private
 const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findById(req.params.id);
+    const { id } = req.params;
+    const { rows: checkRows } = await query('SELECT * FROM notification WHERE id = $1', [id]);
+    const notification = checkRows[0];
 
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
     // Ensure user owns this notification
-    if (notification.recipient.toString() !== req.user._id.toString()) {
+    if (notification.recipient_id !== req.user.id) {
       return res.status(401).json({ message: 'Not authorized' });
     }
 
-    notification.isRead = true;
-    await notification.save();
-
-    res.json(notification);
+    const { rows: updatedRows } = await query(
+      'UPDATE notification SET is_read = TRUE, updated_at = NOW() WHERE id = $1 RETURNING *',
+      [id]
+    );
+    const r = updatedRows[0];
+    res.json({
+      _id: r.id,
+      id: r.id,
+      recipient: r.recipient_id,
+      message: r.message,
+      type: r.type,
+      isRead: r.is_read,
+      relatedId: r.related_id,
+      createdAt: r.created_at
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

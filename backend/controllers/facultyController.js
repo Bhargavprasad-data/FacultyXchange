@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { query } from '../config/pgClient.js';
 
 // @desc    Get all faculty
@@ -5,7 +6,8 @@ import { query } from '../config/pgClient.js';
 // @access  Private/Admin
 export const getFaculty = async (req, res) => {
   const { rows } = await query('SELECT id, name, "facultyId", department, email, role, created_at, updated_at FROM faculty');
-  res.json(rows);
+  // Return _id along with id for frontend compatibility
+  res.json(rows.map(r => ({ ...r, _id: r.id })));
 };
 
 // @desc    Get faculty by ID
@@ -15,7 +17,7 @@ export const getFacultyById = async (req, res) => {
   const { id } = req.params;
   const { rows } = await query('SELECT id, name, "facultyId", department, email, role FROM faculty WHERE id = $1', [id]);
   if (rows.length) {
-    res.json(rows[0]);
+    res.json({ ...rows[0], _id: rows[0].id });
   } else {
     res.status(404).json({ message: 'Faculty not found' });
   }
@@ -31,11 +33,13 @@ export const registerFaculty = async (req, res) => {
   if (existRows.length) {
     return res.status(400).json({ message: 'Faculty user already exists' });
   }
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
   const { rows } = await query(
     'INSERT INTO faculty (name, "facultyId", department, email, password, role) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, name, "facultyId", department, email, role',
-    [name, facultyId, department, email, password, role || 'Faculty']
+    [name, facultyId, department, email, hashedPassword, role || 'Faculty']
   );
-  res.status(201).json(rows[0]);
+  res.status(201).json({ ...rows[0], _id: rows[0].id });
 };
 
 // @desc    Update faculty
@@ -51,7 +55,12 @@ export const updateFaculty = async (req, res) => {
   if (facultyId) { fields.push(`"facultyId" = $${idx++}`); values.push(facultyId); }
   if (department) { fields.push(`department = $${idx++}`); values.push(department); }
   if (email) { fields.push(`email = $${idx++}`); values.push(email); }
-  if (password) { fields.push(`password = $${idx++}`); values.push(password); }
+  if (password) {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    fields.push(`password = $${idx++}`);
+    values.push(hashedPassword);
+  }
   if (role) { fields.push(`role = $${idx++}`); values.push(role); }
   if (fields.length === 0) {
     return res.status(400).json({ message: 'No fields to update' });
@@ -59,7 +68,7 @@ export const updateFaculty = async (req, res) => {
   const queryText = `UPDATE faculty SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, name, "facultyId", department, email, role`;
   values.push(id);
   const { rows } = await query(queryText, values);
-  res.json(rows[0]);
+  res.json({ ...rows[0], _id: rows[0].id });
 };
 
 // @desc    Delete faculty
@@ -70,8 +79,5 @@ export const deleteFaculty = async (req, res) => {
   await query('DELETE FROM faculty WHERE id = $1', [id]);
   res.json({ message: 'Faculty removed' });
 };
-
-export { getFaculty, getFacultyById, registerFaculty, updateFaculty, deleteFaculty };
-
 
 // Duplicate Mongoose implementation removed

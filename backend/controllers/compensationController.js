@@ -1,7 +1,4 @@
-import CompensationClass from '../models/CompensationClass.js';
-import SubstituteClass from '../models/SubstituteClass.js';
-import Faculty from '../models/Faculty.js';
-import Notification from '../models/Notification.js';
+import { query } from '../config/pgClient.js';
 
 // @desc    Schedule/Mark a compensation class
 // @route   POST /api/compensation
@@ -10,46 +7,59 @@ const createCompensationClass = async (req, res) => {
   const { substituteClassId, classDate, period, subject, section, room } = req.body;
 
   try {
-    const substituteRequest = await SubstituteClass.findById(substituteClassId);
+    const { rows: subRequests } = await query('SELECT * FROM substitute_class WHERE id = $1', [substituteClassId]);
+    const substituteRequest = subRequests[0];
 
     if (!substituteRequest) {
       return res.status(404).json({ message: 'Original substitute request not found' });
     }
 
-    if (substituteRequest.compensationStatus === 'Completed') {
+    if (substituteRequest.compensation_status === 'Completed') {
       return res.status(400).json({ message: 'Compensation already completed for this request' });
     }
 
     // Security check: Only the person who ORIGINALY took the leave can do the compensation
-    if (substituteRequest.originalFaculty.toString() !== req.user._id.toString()) {
-        return res.status(401).json({ message: 'Not authorized to compensate this class' });
+    if (substituteRequest.original_faculty_id !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to compensate this class' });
     }
 
-    const compensationClass = await CompensationClass.create({
-      originalFaculty: req.user._id, // The one doing the work now
-      substituteFaculty: substituteRequest.substituteFaculty, // The one receiving the work now
-      substituteClassReference: substituteRequest._id,
-      classDate,
-      period,
-      subject,
-      section,
-      room,
-      status: 'Completed'
-    });
+    const { rows: compClasses } = await query(
+      `INSERT INTO compensation_class (original_faculty_id, substitute_faculty_id, substitute_class_reference_id, class_date, period, subject, section, room, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Completed')
+       RETURNING *`,
+      [req.user.id, substituteRequest.substitute_faculty_id, substituteRequest.id, classDate, period, subject, section, room]
+    );
+    const compensationClass = compClasses[0];
 
     // Update the substitute request to completed
-    substituteRequest.compensationStatus = 'Completed';
-    await substituteRequest.save();
+    await query('UPDATE substitute_class SET compensation_status = $1 WHERE id = $2', ['Completed', substituteRequest.id]);
 
     // Create Notification for the recipient faculty (the one who originally subbed)
-    await Notification.create({
-      recipient: substituteRequest.substituteFaculty,
-      message: `${req.user.name} has scheduled to teach your ${subject} class on ${new Date(classDate).toLocaleDateString()} (Period ${period}) as compensation.`,
-      type: 'Compensation',
-      relatedId: compensationClass._id
-    });
+    const dateFormatted = new Date(classDate).toLocaleDateString();
+    await query(
+      `INSERT INTO notification (recipient_id, message, type, related_id)
+       VALUES ($1, $2, 'Compensation', $3)`,
+      [
+        substituteRequest.substitute_faculty_id,
+        `${req.user.name} has scheduled to teach your ${subject} class on ${dateFormatted} (Period ${period}) as compensation.`,
+        compensationClass.id
+      ]
+    );
 
-    res.status(201).json(compensationClass);
+    res.status(201).json({
+      _id: compensationClass.id,
+      id: compensationClass.id,
+      originalFaculty: compensationClass.original_faculty_id,
+      substituteFaculty: compensationClass.substitute_faculty_id,
+      substituteClassReference: compensationClass.substitute_class_reference_id,
+      classDate: compensationClass.class_date,
+      period: compensationClass.period,
+      subject: compensationClass.subject,
+      section: compensationClass.section,
+      room: compensationClass.room,
+      status: compensationClass.status,
+      createdAt: compensationClass.created_at
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -60,13 +70,41 @@ const createCompensationClass = async (req, res) => {
 // @access  Private
 const getCompensationClasses = async (req, res) => {
   try {
-    const classes = await CompensationClass.find({
-      $or: [{ originalFaculty: req.user._id }, { substituteFaculty: req.user._id }],
-    }).populate('originalFaculty', 'name facultyId')
-      .populate('substituteFaculty', 'name facultyId')
-      .sort({ classDate: -1 });
+    const { rows } = await query(
+      `SELECT cc.*, 
+              ofac.name AS "original_name", ofac."facultyId" AS "original_facultyId",
+              sfac.name AS "substitute_name", sfac."facultyId" AS "substitute_facultyId"
+       FROM compensation_class cc
+       LEFT JOIN faculty ofac ON cc.original_faculty_id = ofac.id
+       LEFT JOIN faculty sfac ON cc.substitute_faculty_id = sfac.id
+       WHERE cc.original_faculty_id = $1 OR cc.substitute_faculty_id = $1
+       ORDER BY cc.class_date DESC`,
+      [req.user.id]
+    );
       
-    res.json(classes);
+    res.json(rows.map(r => ({
+      _id: r.id,
+      id: r.id,
+      classDate: r.class_date,
+      period: r.period,
+      subject: r.subject,
+      section: r.section,
+      room: r.room,
+      status: r.status,
+      originalFaculty: {
+        _id: r.original_faculty_id,
+        id: r.original_faculty_id,
+        name: r.original_name,
+        facultyId: r.original_facultyId
+      },
+      substituteFaculty: {
+        _id: r.substitute_faculty_id,
+        id: r.substitute_faculty_id,
+        name: r.substitute_name,
+        facultyId: r.substitute_facultyId
+      },
+      createdAt: r.created_at
+    })));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -77,12 +115,41 @@ const getCompensationClasses = async (req, res) => {
 // @access  Private/Admin
 const getAllCompensationClasses = async (req, res) => {
   try {
-    const classes = await CompensationClass.find({})
-      .populate('originalFaculty', 'name facultyId department')
-      .populate('substituteFaculty', 'name facultyId department')
-      .sort({ classDate: -1 });
+    const { rows } = await query(
+      `SELECT cc.*, 
+              ofac.name AS "original_name", ofac."facultyId" AS "original_facultyId", ofac.department AS "original_dept",
+              sfac.name AS "substitute_name", sfac."facultyId" AS "substitute_facultyId", sfac.department AS "substitute_dept"
+       FROM compensation_class cc
+       LEFT JOIN faculty ofac ON cc.original_faculty_id = ofac.id
+       LEFT JOIN faculty sfac ON cc.substitute_faculty_id = sfac.id
+       ORDER BY cc.class_date DESC`
+    );
       
-    res.json(classes);
+    res.json(rows.map(r => ({
+      _id: r.id,
+      id: r.id,
+      classDate: r.class_date,
+      period: r.period,
+      subject: r.subject,
+      section: r.section,
+      room: r.room,
+      status: r.status,
+      originalFaculty: {
+        _id: r.original_faculty_id,
+        id: r.original_faculty_id,
+        name: r.original_name,
+        facultyId: r.original_facultyId,
+        department: r.original_dept
+      },
+      substituteFaculty: {
+        _id: r.substitute_faculty_id,
+        id: r.substitute_faculty_id,
+        name: r.substitute_name,
+        facultyId: r.substitute_facultyId,
+        department: r.substitute_dept
+      },
+      createdAt: r.created_at
+    })));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

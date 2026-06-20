@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import Faculty from '../models/Faculty.js';
+import { query } from '../config/pgClient.js';
 
 const protect = async (req, res, next) => {
   let token;
@@ -12,7 +12,11 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
-      req.user = await Faculty.findById(decoded.userId).select('-password');
+      const { rows } = await query(
+        'SELECT id, name, "facultyId", department, email, role FROM faculty WHERE id = $1',
+        [decoded.userId]
+      );
+      req.user = rows[0];
       
       if (!req.user) {
         return res.status(401).json({ message: 'User not found' });

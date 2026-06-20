@@ -1,4 +1,5 @@
-import Faculty from '../models/Faculty.js';
+import bcrypt from 'bcryptjs';
+import { query } from '../config/pgClient.js';
 import generateToken from '../utils/generateToken.js';
 
 // @desc    Auth user/faculty & get token
@@ -8,13 +9,15 @@ const authUser = async (req, res) => {
   const { facultyId, password } = req.body;
 
   try {
-    const user = await Faculty.findOne({ facultyId });
+    const { rows } = await query('SELECT * FROM faculty WHERE "facultyId" = $1', [facultyId]);
+    const user = rows[0];
 
-    if (user && (await user.matchPassword(password))) {
-      const token = generateToken(res, user._id);
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const token = generateToken(res, user.id);
       
       res.json({
-        _id: user._id,
+        _id: user.id,
+        id: user.id,
         name: user.name,
         facultyId: user.facultyId,
         department: user.department,
@@ -26,6 +29,7 @@ const authUser = async (req, res) => {
       res.status(401).json({ message: 'Invalid faculty ID or password' });
     }
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
