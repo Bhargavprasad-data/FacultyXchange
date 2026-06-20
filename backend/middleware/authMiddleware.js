@@ -16,7 +16,7 @@ const protect = async (req, res, next) => {
         'SELECT id, name, "facultyId", department, email, role FROM faculty WHERE id = $1',
         [decoded.userId]
       );
-      req.user = rows[0];
+      req.user = { ...rows[0], _id: rows[0].id };
       
       if (!req.user) {
         return res.status(401).json({ message: 'User not found' });
@@ -25,7 +25,7 @@ const protect = async (req, res, next) => {
       next();
     } catch (error) {
       console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }
 
