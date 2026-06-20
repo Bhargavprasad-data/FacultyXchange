@@ -38,8 +38,8 @@ services:
       - key: NODE_VERSION
         value: 20
 
-  - type: postgres
-    name: faculty-db
+databases:
+  - name: faculty-db
     plan: free
     region: oregon
     databaseName: faculty_exchange
