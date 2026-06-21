@@ -132,7 +132,7 @@ const History = () => {
                           <td>{sub.originalFaculty.name}</td>
                           <td>{sub.substituteFaculty.name}</td>
                           <td>
-                            {sub.status === 'Pending' ? (
+                            {(sub.status === 'Pending' || !sub.status) ? (
                               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                 <span className="badge badge-pending">Pending Approval</span>
                                 {sub.substituteFaculty._id == user?._id && (

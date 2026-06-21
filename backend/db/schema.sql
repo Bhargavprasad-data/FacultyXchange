@@ -71,3 +71,6 @@ CREATE TABLE IF NOT EXISTS compensation_class (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure status column is added to existing tables
+ALTER TABLE substitute_class ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Pending';
