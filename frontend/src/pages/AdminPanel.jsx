@@ -296,7 +296,7 @@ const AdminPanel = () => {
           </div>
           <div>
             <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Total Faculties</h4>
-            <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-family-heading)' }}>{faculties.length}</div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, fontFamily: 'var(--font-family-heading)' }}>{faculties.filter(f => f.role !== 'Admin').length}</div>
           </div>
         </motion.div>
 
@@ -494,7 +494,7 @@ const AdminPanel = () => {
                     <label className="form-label">Faculty</label>
                     <select name="facultyId" className="form-input" required value={timetableForm.facultyId} onChange={handleTimetableChange}>
                       <option value="" disabled>Select Faculty</option>
-                      {faculties.map(f => <option key={f._id} value={f._id}>{f.name} ({f.department})</option>)}
+                      {faculties.filter(f => f.role !== 'Admin').map(f => <option key={f._id} value={f._id}>{f.name} ({f.department})</option>)}
                     </select>
                   </div>
                   <div className="form-group">

@@ -50,6 +50,7 @@ const getAllTimetables = async (req, res) => {
       `SELECT t.*, f.name, f.department, f.email 
        FROM timetable t 
        LEFT JOIN faculty f ON t.faculty_id = f.id 
+       WHERE f.role != 'Admin'
        ORDER BY t.day, t.period`
     );
     const timetables = rows.map(r => ({
