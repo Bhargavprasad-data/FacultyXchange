@@ -44,13 +44,13 @@ const Compensate = () => {
         const { data } = await api.get('/substitute');
         if (!isMounted) return;
         
-        // Filter to requests where I am the original faculty (I owe them a class)
-        const owing = data.filter(d => 
-          d.originalFaculty._id === user._id && 
+        // Filter to requests where I am the SUBSTITUTE faculty (they owe me a class)
+        const owingMe = data.filter(d => 
+          d.substituteFaculty._id == user?._id && 
           d.status === 'Approved' &&
           d.compensationStatus === 'Pending'
         );
-        setPendingRequests(owing);
+        setPendingRequests(owingMe);
         setLoading(false);
 
         clearTimeout(pollTimer);
@@ -79,10 +79,10 @@ const Compensate = () => {
     setSelectedTimetableSlot(null);
     setCompensationDate(''); // Reset date when picking a new obligation
 
-    // Fetch the target faculty's timetable (the person who subbed for me, so I can pick their class to teach)
+    // Fetch MY timetable so I can assign one of my classes to them
     try {
       if (req) {
-        const { data } = await api.get(`/timetable/${req.substituteFaculty._id}`);
+        const { data } = await api.get(`/timetable/${user?._id}`);
         setTargetTimetable(data);
       }
     } catch (error) {
@@ -137,10 +137,10 @@ const Compensate = () => {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="page-title">Compensate a Class</h1>
-          <p className="page-subtitle">Return the favor by taking a scheduled class for a faculty who subbed for you</p>
+          <p className="page-subtitle">Assign one of your classes to a faculty member who owes you a compensation</p>
         </div>
         <div style={{ background: '#fef3c7', color: '#92400e', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', fontWeight: '600', border: '1px solid #fde68a', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-          Classes You Owe: <span style={{ fontSize: '1.2rem', marginLeft: '0.5rem' }}>{pendingRequests.length}</span>
+          Classes Owed to You: <span style={{ fontSize: '1.2rem', marginLeft: '0.5rem' }}>{pendingRequests.length}</span>
         </div>
       </div>
 
@@ -149,10 +149,10 @@ const Compensate = () => {
           <div className="form-group mb-6">
             <label className="form-label">Select Pending Obligation</label>
             <select className="form-input" required onChange={handleSelectRequest} defaultValue="" style={{ fontSize: '1rem' }}>
-              <option value="" disabled>Select the class you need to compensate for...</option>
+              <option value="" disabled>Select a faculty who owes you...</option>
               {pendingRequests.map(req => (
                 <option key={req._id} value={req._id}>
-                  Owe: {req.substituteFaculty.name} (Subbed your {req.subject} class on {new Date(req.date).toLocaleDateString()})
+                  {req.originalFaculty.name} owes you (for your substitution on {new Date(req.date).toLocaleDateString()})
                 </option>
               ))}
             </select>
@@ -166,12 +166,12 @@ const Compensate = () => {
             >
               <div style={{ borderTop: '1px solid var(--border-color)', margin: '2rem 0' }}></div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1.5rem', color: 'var(--text-primary)', fontFamily: 'var(--font-family-heading)' }}>
-                Select <span style={{ color: 'var(--primary-color)' }}>{selectedRequest.substituteFaculty.name}'s</span> Class to Teach
+                Select Your Class to Assign to <span style={{ color: 'var(--primary-color)' }}>{selectedRequest.originalFaculty.name}</span>
               </h3>
 
               <div className="grid grid-cols-2 gap-x-8 gap-y-2 mb-4">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="compensationDate">Date You Will Teach</label>
+                  <label className="form-label" htmlFor="compensationDate">Date They Will Teach</label>
                   <input 
                     type="date" 
                     id="compensationDate" 
@@ -184,7 +184,7 @@ const Compensate = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Their Scheduled Class Slot</label>
+                  <label className="form-label">Your Scheduled Class Slot</label>
                   <select 
                     className="form-input" 
                     required 
@@ -217,7 +217,7 @@ const Compensate = () => {
                     borderLeft: '4px solid var(--accent-color)'
                   }}
                 >
-                  <strong style={{ color: 'var(--accent-hover)' }}>Summary:</strong> You will teach <span style={{fontWeight:600}}>{selectedTimetableSlot.subject}</span> to Section <span style={{fontWeight:600}}>{selectedTimetableSlot.section}</span> in Room <span style={{fontWeight:600}}>{selectedTimetableSlot.room}</span> on <span style={{fontWeight:600}}>{compensationDate}</span> (Period {selectedTimetableSlot.period}).
+                  <strong style={{ color: 'var(--accent-hover)' }}>Summary:</strong> You are assigning your <span style={{fontWeight:600}}>{selectedTimetableSlot.subject}</span> class (Section <span style={{fontWeight:600}}>{selectedTimetableSlot.section}</span> in Room <span style={{fontWeight:600}}>{selectedTimetableSlot.room}</span>) on <span style={{fontWeight:600}}>{compensationDate}</span> to <span style={{fontWeight:600}}>{selectedRequest.originalFaculty.name}</span>.
                 </motion.div>
               )}
 
@@ -232,7 +232,7 @@ const Compensate = () => {
           {pendingRequests.length === 0 && (
             <div style={{ padding: '3rem 2rem', textAlign: 'center', backgroundColor: 'var(--success-light)', color: '#047857', borderRadius: 'var(--radius-md)', border: '1px dashed #34d399' }}>
               <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>All caught up!</p>
-              <p style={{ marginTop: '0.5rem' }}>You have no pending classes to compensate.</p>
+              <p style={{ marginTop: '0.5rem' }}>No faculty currently owes you a compensation class.</p>
             </div>
           )}
         </form>

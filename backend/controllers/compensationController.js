@@ -19,30 +19,30 @@ const createCompensationClass = async (req, res) => {
       return res.status(400).json({ message: 'Compensation already completed for this request' });
     }
 
-    // Security check: Only the person who ORIGINALY took the leave can do the compensation
-    if (substituteRequest.original_faculty_id !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized to compensate this class' });
+    // Security check: Only the person who STEPPED IN as substitute can demand the compensation
+    if (substituteRequest.substitute_faculty_id !== req.user.id) {
+      return res.status(401).json({ message: 'Not authorized to demand compensation for this class' });
     }
 
     const { rows: compClasses } = await query(
       `INSERT INTO compensation_class (original_faculty_id, substitute_faculty_id, substitute_class_reference_id, class_date, period, subject, section, room, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Completed')
        RETURNING *`,
-      [req.user.id, substituteRequest.substitute_faculty_id, substituteRequest.id, classDate, period, subject, section, room]
+      [substituteRequest.original_faculty_id, req.user.id, substituteRequest.id, classDate, period, subject, section, room]
     );
     const compensationClass = compClasses[0];
 
     // Update the substitute request to completed
     await query('UPDATE substitute_class SET compensation_status = $1 WHERE id = $2', ['Completed', substituteRequest.id]);
 
-    // Create Notification for the recipient faculty (the one who originally subbed)
+    // Create Notification for the original faculty (the one who owes the class)
     const dateFormatted = new Date(classDate).toLocaleDateString();
     await query(
       `INSERT INTO notification (recipient_id, message, type, related_id)
        VALUES ($1, $2, 'Compensation', $3)`,
       [
-        substituteRequest.substitute_faculty_id,
-        `${req.user.name} has scheduled to teach your ${subject} class on ${dateFormatted} (Period ${period}) as compensation.`,
+        substituteRequest.original_faculty_id,
+        `${req.user.name} has assigned you to teach their ${subject} class on ${dateFormatted} (Period ${period}) as compensation.`,
         compensationClass.id
       ]
     );
