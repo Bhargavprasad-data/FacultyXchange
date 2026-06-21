@@ -1,4 +1,4 @@
-const CACHE_NAME = 'faculty-xchange-v3';
+const CACHE_NAME = 'faculty-xchange-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -7,6 +7,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting(); // Force new SW to take over immediately
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -27,16 +28,26 @@ self.addEventListener('activate', event => {
       );
     })
   );
+  return self.clients.claim(); // Take control of all clients immediately
 });
 
 self.addEventListener('fetch', event => {
+  // Network-first strategy for everything to ensure users always get the latest updates
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(response => {
-        if (response) {
-          return response;
+        // Cache the latest version
+        if (response.status === 200 && event.request.method === 'GET') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
         }
-        return fetch(event.request);
+        return response;
+      })
+      .catch(() => {
+        // Fallback to cache if network fails
+        return caches.match(event.request);
       })
   );
 });
