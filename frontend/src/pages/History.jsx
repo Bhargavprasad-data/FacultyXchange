@@ -14,7 +14,7 @@ const History = () => {
 
   // Stats calculation
   const classesTakenCount = substitutes.filter(
-    sub => sub.substituteFaculty._id === user?._id && sub.status === 'Approved'
+    sub => sub.substituteFaculty._id == user?._id && sub.status === 'Approved'
   ).length;
 
   const handleApprove = async (subId) => {
@@ -135,7 +135,7 @@ const History = () => {
                             {sub.status === 'Pending' ? (
                               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                 <span className="badge badge-pending">Pending Approval</span>
-                                {sub.substituteFaculty._id === user?._id && (
+                                {sub.substituteFaculty._id == user?._id && (
                                   <button onClick={() => handleApprove(sub._id)} className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Approve</button>
                                 )}
                               </div>
