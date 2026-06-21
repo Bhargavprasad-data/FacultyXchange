@@ -157,10 +157,10 @@ const Compensate = () => {
                     padding: '1rem',
                     borderRadius: 'var(--radius-md)',
                     border: `2px solid ${selectedRequest?._id === req._id ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                    backgroundColor: selectedRequest?._id === req._id ? 'rgba(37, 99, 235, 0.05)' : 'white',
+                    backgroundColor: selectedRequest?._id === req._id ? 'var(--primary-light)' : 'transparent',
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
-                    boxShadow: selectedRequest?._id === req._id ? '0 4px 12px rgba(37, 99, 235, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)'
+                    boxShadow: selectedRequest?._id === req._id ? '0 4px 12px rgba(37, 99, 235, 0.15)' : 'none'
                   }}
                 >
                   <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
