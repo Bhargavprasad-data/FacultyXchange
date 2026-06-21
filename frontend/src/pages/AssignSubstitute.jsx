@@ -37,8 +37,8 @@ const AssignSubstitute = () => {
         ]);
         
         if (!isMounted) return;
-        // Filter out the current user, allow ANY department
-        const eligible = facsRes.data.filter(f => f._id !== user._id);
+        // Filter out the current user and Admins, allow ANY department
+        const eligible = facsRes.data.filter(f => f._id !== user._id && f.role !== 'Admin');
         setFaculties(eligible);
         setMyTimetable(timeRes.data);
         setLoading(false);
