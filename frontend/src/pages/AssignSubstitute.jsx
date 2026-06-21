@@ -88,22 +88,28 @@ const AssignSubstitute = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    if (name === 'period') {
-      // Auto-fill other fields based on selected period slot
-      const selectedSlot = availableSlots.find(s => s.period.toString() === value);
-      if (selectedSlot) {
-        setFormData({
-          ...formData,
-          period: value,
-          subject: selectedSlot.subject,
-          section: selectedSlot.section,
-          classroom: selectedSlot.room
-        });
-        return;
+    let newFormData = { ...formData, [name]: value };
+
+    // Auto-fill logic if both date and period are selected
+    if (name === 'date' || name === 'period') {
+      const selectedDate = name === 'date' ? value : formData.date;
+      const selectedPeriod = name === 'period' ? value : formData.period;
+
+      if (selectedDate && selectedPeriod) {
+        const dateObj = new Date(selectedDate);
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = days[dateObj.getDay()];
+        
+        const selectedSlot = myTimetable.find(s => s.day === dayName && s.period.toString() === selectedPeriod.toString());
+        if (selectedSlot) {
+          newFormData.subject = selectedSlot.subject;
+          newFormData.section = selectedSlot.section;
+          newFormData.classroom = selectedSlot.room;
+        }
       }
     }
     
-    setFormData({ ...formData, [name]: value });
+    setFormData(newFormData);
   };
 
   const handleSubmit = async (e) => {
@@ -148,7 +154,7 @@ const AssignSubstitute = () => {
             
             <div className="form-group">
               <label className="form-label" htmlFor="period">Period Number</label>
-              <select id="period" name="period" className="form-input" required onChange={handleChange} value={formData.period} disabled={!formData.date}>
+              <select id="period" name="period" className="form-input" required onChange={handleChange} value={formData.period}>
                 <option value="" disabled>
                   {!formData.date ? 'Select Date First' : availableSlots.length === 0 ? 'No Classes Scheduled' : 'Select Period'}
                 </option>
@@ -160,7 +166,7 @@ const AssignSubstitute = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="subject">Subject Name</label>
-              <select id="subject" name="subject" className="form-input" required onChange={handleChange} value={formData.subject} disabled={!formData.period}>
+              <select id="subject" name="subject" className="form-input" required onChange={handleChange} value={formData.subject}>
                 <option value="" disabled>Select Subject</option>
                 {Array.from(new Set(availableSlots.map(s => s.subject))).map(subj => (
                    <option key={subj} value={subj}>{subj}</option>
@@ -170,7 +176,7 @@ const AssignSubstitute = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="classroom">Classroom</label>
-              <select id="classroom" name="classroom" className="form-input" required onChange={handleChange} value={formData.classroom} disabled={!formData.period}>
+              <select id="classroom" name="classroom" className="form-input" required onChange={handleChange} value={formData.classroom}>
                 <option value="" disabled>Select Room</option>
                 {Array.from(new Set(availableSlots.map(s => s.room))).map(rm => (
                    <option key={rm} value={rm}>{rm}</option>
@@ -206,7 +212,7 @@ const AssignSubstitute = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="section">Section</label>
-              <select id="section" name="section" className="form-input" required onChange={handleChange} value={formData.section} disabled={!formData.period}>
+              <select id="section" name="section" className="form-input" required onChange={handleChange} value={formData.section}>
                 <option value="" disabled>Select Section</option>
                 {Array.from(new Set(availableSlots.map(s => s.section))).map(sec => (
                    <option key={sec} value={sec}>{sec}</option>
