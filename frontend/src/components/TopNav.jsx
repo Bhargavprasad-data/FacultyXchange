@@ -46,6 +46,15 @@ const TopNav = () => {
     }
   };
 
+  const handleClearAll = async () => {
+    try {
+      await api.delete('/notifications');
+      setNotifications([]);
+    } catch (error) {
+      console.error('Failed to clear notifications', error);
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
@@ -93,8 +102,27 @@ const TopNav = () => {
                 style={styles.dropdown}
               >
                 <div style={styles.dropdownHeader}>
-                  <h3 style={styles.dropdownTitle}>Notifications</h3>
-                  {unreadCount > 0 && <span style={styles.unreadCountText}>{unreadCount} unread</span>}
+                  <div>
+                    <h3 style={styles.dropdownTitle}>Notifications</h3>
+                    {unreadCount > 0 && <span style={styles.unreadCountText}>{unreadCount} unread</span>}
+                  </div>
+                  {notifications.length > 0 && (
+                    <button 
+                      onClick={handleClearAll}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--danger-color)',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  )}
                 </div>
                 <div style={styles.dropdownBody}>
                   {notifications.length === 0 ? (
