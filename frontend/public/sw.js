@@ -1,9 +1,9 @@
-const CACHE_NAME = 'faculty-xchange-v2';
+const CACHE_NAME = 'faculty-xchange-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/vite.svg'
+  '/favicon.png'
 ];
 
 self.addEventListener('install', event => {
