@@ -62,31 +62,48 @@ const AssignSubstitute = () => {
     };
   }, [user]);
 
+  // Update available slots when date changes
+  useEffect(() => {
+    if (formData.date) {
+      const dateObj = new Date(formData.date);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const dayName = days[dateObj.getDay()];
+      
+      const slotsForDay = myTimetable.filter(slot => slot.day === dayName).sort((a,b) => a.period - b.period);
+      setAvailableSlots(slotsForDay);
+      
+      // Reset dependent fields if date changes
+      setFormData(prev => ({
+        ...prev,
+        period: '',
+        subject: '',
+        section: '',
+        classroom: ''
+      }));
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [formData.date, myTimetable]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    let newFormData = { ...formData, [name]: value };
-
-    // Auto-fill logic if both date and period are selected
-    if (name === 'date' || name === 'period') {
-      const selectedDate = name === 'date' ? value : formData.date;
-      const selectedPeriod = name === 'period' ? value : formData.period;
-
-      if (selectedDate && selectedPeriod) {
-        const dateObj = new Date(selectedDate);
-        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const dayName = days[dateObj.getDay()];
-        
-        const selectedSlot = myTimetable.find(s => s.day === dayName && s.period.toString() === selectedPeriod.toString());
-        if (selectedSlot) {
-          newFormData.subject = selectedSlot.subject;
-          newFormData.section = selectedSlot.section;
-          newFormData.classroom = selectedSlot.room;
-        }
+    if (name === 'period') {
+      // Auto-fill other fields based on selected period slot
+      const selectedSlot = availableSlots.find(s => s.period.toString() === value);
+      if (selectedSlot) {
+        setFormData({
+          ...formData,
+          period: value,
+          subject: selectedSlot.subject,
+          section: selectedSlot.section,
+          classroom: selectedSlot.room
+        });
+        return;
       }
     }
     
-    setFormData(newFormData);
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -131,22 +148,34 @@ const AssignSubstitute = () => {
             
             <div className="form-group">
               <label className="form-label" htmlFor="period">Period Number</label>
-              <select id="period" name="period" className="form-input" required onChange={handleChange} value={formData.period}>
-                <option value="" disabled>Select Period</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                  <option key={num} value={num}>Period {num}</option>
+              <select id="period" name="period" className="form-input" required onChange={handleChange} value={formData.period} disabled={!formData.date}>
+                <option value="" disabled>
+                  {!formData.date ? 'Select Date First' : availableSlots.length === 0 ? 'No Classes Scheduled' : 'Select Period'}
+                </option>
+                {availableSlots.map(slot => (
+                  <option key={slot._id} value={slot.period}>Period {slot.period} - {slot.subject}</option>
                 ))}
               </select>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="subject">Subject Name</label>
-              <input type="text" id="subject" name="subject" className="form-input" required onChange={handleChange} value={formData.subject} placeholder="Enter Subject Name" />
+              <select id="subject" name="subject" className="form-input" required onChange={handleChange} value={formData.subject} disabled={!formData.period}>
+                <option value="" disabled>Select Subject</option>
+                {Array.from(new Set(availableSlots.map(s => s.subject))).map(subj => (
+                   <option key={subj} value={subj}>{subj}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="classroom">Classroom</label>
-              <input type="text" id="classroom" name="classroom" className="form-input" required onChange={handleChange} value={formData.classroom} placeholder="Enter Classroom" />
+              <select id="classroom" name="classroom" className="form-input" required onChange={handleChange} value={formData.classroom} disabled={!formData.period}>
+                <option value="" disabled>Select Room</option>
+                {Array.from(new Set(availableSlots.map(s => s.room))).map(rm => (
+                   <option key={rm} value={rm}>{rm}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
@@ -177,7 +206,12 @@ const AssignSubstitute = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="section">Section</label>
-              <input type="text" id="section" name="section" className="form-input" required onChange={handleChange} value={formData.section} placeholder="Enter Section" />
+              <select id="section" name="section" className="form-input" required onChange={handleChange} value={formData.section} disabled={!formData.period}>
+                <option value="" disabled>Select Section</option>
+                {Array.from(new Set(availableSlots.map(s => s.section))).map(sec => (
+                   <option key={sec} value={sec}>{sec}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
