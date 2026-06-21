@@ -155,6 +155,7 @@ const getAllSubstituteClasses = async (req, res) => {
       },
       createdAt: r.created_at
     })));
+  } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
