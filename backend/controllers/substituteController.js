@@ -53,6 +53,7 @@ const createSubstituteClass = async (req, res) => {
       classroom: substituteClass.classroom,
       originalFaculty: substituteClass.original_faculty_id,
       substituteFaculty: substituteClass.substitute_faculty_id,
+      status: substituteClass.status,
       compensationStatus: substituteClass.compensation_status,
       createdAt: substituteClass.created_at
     });
@@ -89,6 +90,7 @@ const getSubstituteClasses = async (req, res) => {
       section: r.section,
       period: r.period,
       classroom: r.classroom,
+      status: r.status,
       compensationStatus: r.compensation_status,
       originalFaculty: {
         _id: r.original_faculty_id,
@@ -135,6 +137,7 @@ const getAllSubstituteClasses = async (req, res) => {
       section: r.section,
       period: r.period,
       classroom: r.classroom,
+      status: r.status,
       compensationStatus: r.compensation_status,
       originalFaculty: {
         _id: r.original_faculty_id,
@@ -152,9 +155,59 @@ const getAllSubstituteClasses = async (req, res) => {
       },
       createdAt: r.created_at
     })));
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Approve a substitute class
+// @route   PUT /api/substitute/:id/approve
+// @access  Private
+const approveSubstituteClass = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const { rows: checkRows } = await query('SELECT * FROM substitute_class WHERE id = $1', [id]);
+    const substituteClass = checkRows[0];
+
+    if (!substituteClass) {
+      return res.status(404).json({ message: 'Substitute class not found' });
+    }
+
+    if (substituteClass.substitute_faculty_id !== userId) {
+      return res.status(401).json({ message: 'Not authorized to approve this substitute class' });
+    }
+
+    const { rows: updatedRows } = await query(
+      `UPDATE substitute_class SET status = 'Approved', updated_at = NOW() WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    const updatedClass = updatedRows[0];
+
+    // Create Notification for the Original Faculty
+    const dateFormatted = new Date(updatedClass.date).toLocaleDateString();
+    
+    // Fetch substitute faculty name for the notification message
+    const { rows: subFacRows } = await query('SELECT name FROM faculty WHERE id = $1', [userId]);
+    const subName = subFacRows[0].name;
+
+    await query(
+      `INSERT INTO notification (recipient_id, message, type, related_id)
+       VALUES ($1, $2, 'Substitute', $3)`,
+      [
+        updatedClass.original_faculty_id,
+        `${subName} has approved to cover your ${updatedClass.subject} class on ${dateFormatted} (Period ${updatedClass.period}).`,
+        updatedClass.id
+      ]
+    );
+
+    res.json({
+      ...updatedClass,
+      status: updatedClass.status
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-export { createSubstituteClass, getSubstituteClasses, getAllSubstituteClasses };
+export { createSubstituteClass, getSubstituteClasses, getAllSubstituteClasses, approveSubstituteClass };

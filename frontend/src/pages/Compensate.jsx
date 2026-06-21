@@ -47,6 +47,7 @@ const Compensate = () => {
         // Filter to requests where I am the original faculty (I owe them a class)
         const owing = data.filter(d => 
           d.originalFaculty._id === user._id && 
+          d.status === 'Approved' &&
           d.compensationStatus === 'Pending'
         );
         setPendingRequests(owing);
@@ -133,9 +134,14 @@ const Compensate = () => {
       style={{ maxWidth: '900px', margin: '0 auto' }}
     >
       <Toaster position="top-center" />
-      <div className="page-header">
-        <h1 className="page-title">Compensate a Class</h1>
-        <p className="page-subtitle">Return the favor by taking a scheduled class for a faculty who subbed for you</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 className="page-title">Compensate a Class</h1>
+          <p className="page-subtitle">Return the favor by taking a scheduled class for a faculty who subbed for you</p>
+        </div>
+        <div style={{ background: '#fef3c7', color: '#92400e', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', fontWeight: '600', border: '1px solid #fde68a', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+          Classes You Owe: <span style={{ fontSize: '1.2rem', marginLeft: '0.5rem' }}>{pendingRequests.length}</span>
+        </div>
       </div>
 
       <div className="card">

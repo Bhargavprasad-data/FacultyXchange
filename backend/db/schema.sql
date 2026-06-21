@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS substitute_class (
   classroom VARCHAR(255) NOT NULL,
   original_faculty_id INTEGER REFERENCES faculty(id) ON DELETE SET NULL,
   substitute_faculty_id INTEGER REFERENCES faculty(id) ON DELETE SET NULL,
+  status VARCHAR(50) DEFAULT 'Pending',
   compensation_status VARCHAR(50) DEFAULT 'Pending',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

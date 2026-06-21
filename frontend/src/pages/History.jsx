@@ -1,14 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast, { Toaster } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import SkeletonLoader from '../components/SkeletonLoader';
 
 const History = () => {
+  const { user } = useAuth();
   const [substitutes, setSubstitutes] = useState([]);
   const [compensations, setCompensations] = useState([]);
   const [activeTab, setActiveTab] = useState('substitutes');
   const [loading, setLoading] = useState(true);
+
+  // Stats calculation
+  const classesTakenCount = substitutes.filter(
+    sub => sub.substituteFaculty._id === user?._id && sub.status === 'Approved'
+  ).length;
+
+  const handleApprove = async (subId) => {
+    try {
+      await api.put(`/substitute/${subId}/approve`);
+      toast.success('Substitute class approved!');
+      // Update local state without fetching again to feel snappy
+      setSubstitutes(prev => prev.map(s => s._id === subId ? { ...s, status: 'Approved' } : s));
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to approve');
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -59,9 +77,14 @@ const History = () => {
       style={{ maxWidth: '1000px', margin: '0 auto' }}
     >
       <Toaster position="top-center" />
-      <div className="page-header">
-        <h1 className="page-title">Exchange History & Balance</h1>
-        <p className="page-subtitle">View all your historical assignments and compensation records</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 className="page-title">Exchange History & Balance</h1>
+          <p className="page-subtitle">View all your historical assignments and compensation records</p>
+        </div>
+        <div style={{ background: 'var(--primary-color)', color: 'white', padding: '0.75rem 1.25rem', borderRadius: 'var(--radius-md)', fontWeight: '600', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+          Classes Taken for Others: <span style={{ fontSize: '1.2rem', marginLeft: '0.5rem' }}>{classesTakenCount}</span>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
@@ -109,9 +132,18 @@ const History = () => {
                           <td>{sub.originalFaculty.name}</td>
                           <td>{sub.substituteFaculty.name}</td>
                           <td>
-                            <span className={`badge ${sub.compensationStatus === 'Completed' ? 'badge-completed' : 'badge-pending'}`}>
-                              {sub.compensationStatus}
-                            </span>
+                            {sub.status === 'Pending' ? (
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <span className="badge badge-pending">Pending Approval</span>
+                                {sub.substituteFaculty._id === user?._id && (
+                                  <button onClick={() => handleApprove(sub._id)} className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>Approve</button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className={`badge ${sub.compensationStatus === 'Completed' ? 'badge-completed' : 'badge-pending'}`}>
+                                {sub.compensationStatus === 'Completed' ? 'Compensation Done' : 'Pending Compensation'}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))}
