@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -62,6 +62,8 @@ const AssignSubstitute = () => {
     };
   }, [user]);
 
+  const prevDateRef = useRef(formData.date);
+
   // Update available slots when date changes
   useEffect(() => {
     if (formData.date) {
@@ -72,14 +74,17 @@ const AssignSubstitute = () => {
       const slotsForDay = myTimetable.filter(slot => slot.day === dayName).sort((a,b) => a.period - b.period);
       setAvailableSlots(slotsForDay);
       
-      // Reset dependent fields if date changes
-      setFormData(prev => ({
-        ...prev,
-        period: '',
-        subject: '',
-        section: '',
-        classroom: ''
-      }));
+      // Reset dependent fields ONLY if date actually changed
+      if (prevDateRef.current !== formData.date) {
+        setFormData(prev => ({
+          ...prev,
+          period: '',
+          subject: '',
+          section: '',
+          classroom: ''
+        }));
+        prevDateRef.current = formData.date;
+      }
     } else {
       setAvailableSlots([]);
     }
@@ -159,7 +164,7 @@ const AssignSubstitute = () => {
                   {!formData.date ? 'Select Date First' : availableSlots.length === 0 ? 'No Classes Scheduled' : 'Select Period'}
                 </option>
                 {availableSlots.map(slot => (
-                  <option key={slot._id} value={slot.period}>Period {slot.period} - {slot.subject}</option>
+                  <option key={slot.id || slot._id} value={slot.period}>Period {slot.period} - {slot.subject}</option>
                 ))}
               </select>
             </div>

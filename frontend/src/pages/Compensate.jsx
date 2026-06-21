@@ -92,7 +92,7 @@ const Compensate = () => {
 
   const handleSelectTimetable = (e) => {
     const slotId = e.target.value;
-    const slot = availableTargetSlots.find(t => t._id === slotId);
+    const slot = availableTargetSlots.find(t => String(t.id || t._id) === String(slotId));
     setSelectedTimetableSlot(slot);
   };
 
@@ -205,14 +205,14 @@ const Compensate = () => {
                     className="form-input" 
                     required 
                     onChange={handleSelectTimetable} 
-                    value={selectedTimetableSlot ? selectedTimetableSlot._id : ""}
+                    value={selectedTimetableSlot ? (selectedTimetableSlot.id || selectedTimetableSlot._id) : ""}
                     disabled={!compensationDate || availableTargetSlots.length === 0}
                   >
                     <option value="" disabled>
                       {!compensationDate ? 'Select Date First' : availableTargetSlots.length === 0 ? 'No Schedule on this Day' : 'Select a scheduled slot'}
                     </option>
                     {availableTargetSlots.map(slot => (
-                      <option key={slot._id} value={slot._id}>
+                      <option key={slot.id || slot._id} value={slot.id || slot._id}>
                         {slot.day} - Per {slot.period} - {slot.subject} ({slot.section})
                       </option>
                     ))}
