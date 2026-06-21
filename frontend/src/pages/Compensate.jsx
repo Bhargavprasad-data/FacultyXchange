@@ -15,6 +15,7 @@ const Compensate = () => {
   
   // Timetable of the person who originally helped ME, so I can return the favor
   const [targetTimetable, setTargetTimetable] = useState([]);
+  const [targetFacultyTimetable, setTargetFacultyTimetable] = useState([]);
   const [availableTargetSlots, setAvailableTargetSlots] = useState([]);
   const [selectedTimetableSlot, setSelectedTimetableSlot] = useState(null);
   const [compensationDate, setCompensationDate] = useState('');
@@ -26,14 +27,20 @@ const Compensate = () => {
       const dayName = days[dateObj.getDay()];
       
       const slotsForDay = targetTimetable.filter(slot => slot.day === dayName).sort((a,b) => a.period - b.period);
-      setAvailableTargetSlots(slotsForDay);
+      
+      // Filter out overlapping slots: target faculty shouldn't have a class on the same day and period
+      const nonOverlappingSlots = slotsForDay.filter(mySlot => {
+        return !targetFacultyTimetable.some(tSlot => tSlot.day === dayName && tSlot.period === mySlot.period);
+      });
+
+      setAvailableTargetSlots(nonOverlappingSlots);
       // Reset selected slot if date changes
       setSelectedTimetableSlot(null);
     } else {
       setAvailableTargetSlots([]);
       setSelectedTimetableSlot(null);
     }
-  }, [compensationDate, targetTimetable]);
+  }, [compensationDate, targetTimetable, targetFacultyTimetable]);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,14 +86,19 @@ const Compensate = () => {
     setSelectedTimetableSlot(null);
     setCompensationDate(''); // Reset date when picking a new obligation
 
-    // Fetch MY timetable so I can assign one of my classes to them
+    // Fetch MY timetable so I can assign one of my classes to them,
+    // and fetch THEIR timetable so we don't assign a clashing period.
     try {
       if (req) {
-        const { data } = await api.get(`/timetable/${user?._id}`);
-        setTargetTimetable(data);
+        const [myRes, targetRes] = await Promise.all([
+          api.get(`/timetable/${user?._id}`),
+          api.get(`/timetable/${req.originalFaculty._id || req.originalFaculty.id}`)
+        ]);
+        setTargetTimetable(myRes.data);
+        setTargetFacultyTimetable(targetRes.data);
       }
     } catch (error) {
-      toast.error("Could not fetch target's timetable");
+      toast.error("Could not fetch timetables for overlap check");
     }
   };
 
