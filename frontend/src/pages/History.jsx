@@ -12,8 +12,11 @@ const History = () => {
   const [activeTab, setActiveTab] = useState('substitutes');
   const [loading, setLoading] = useState(true);
 
+  // Filter out substitutes that have already been compensated
+  const activeSubstitutes = substitutes.filter(sub => sub.compensationStatus !== 'Completed');
+
   // Stats calculation
-  const classesTakenCount = substitutes.filter(
+  const classesTakenCount = activeSubstitutes.filter(
     sub => sub.substituteFaculty._id == user?._id && sub.status === 'Approved'
   ).length;
 
@@ -113,7 +116,7 @@ const History = () => {
           <div className="card">
             {activeTab === 'substitutes' && (
               <div className="table-container">
-                {substitutes.length === 0 ? <p style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No substitute history found.</p> : (
+                {activeSubstitutes.length === 0 ? <p style={{ padding: '3rem 2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>No active substitute history found.</p> : (
                   <table className="table">
                     <thead>
                       <tr>
@@ -125,7 +128,7 @@ const History = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {substitutes.map(sub => (
+                      {activeSubstitutes.map(sub => (
                         <tr key={sub._id}>
                           <td style={{ fontWeight: 500 }}>{new Date(sub.date).toLocaleDateString()}</td>
                           <td><span style={{ fontWeight: 600 }}>{sub.subject}</span> <br/><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)'}}>Per {sub.period}</span></td>
