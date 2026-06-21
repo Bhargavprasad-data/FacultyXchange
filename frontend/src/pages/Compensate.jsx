@@ -147,15 +147,31 @@ const Compensate = () => {
       <div className="card">
         <form onSubmit={handleSubmit}>
           <div className="form-group mb-6">
-            <label className="form-label">Select Pending Obligation</label>
-            <select className="form-input" required onChange={handleSelectRequest} defaultValue="" style={{ fontSize: '1rem' }}>
-              <option value="" disabled>Select a faculty who owes you...</option>
+            <label className="form-label" style={{ marginBottom: '1rem', display: 'block', fontSize: '1.1rem' }}>Select a Faculty Who Owes You</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
               {pendingRequests.map(req => (
-                <option key={req._id} value={req._id}>
-                  {req.originalFaculty.name} owes you (for your substitution on {new Date(req.date).toLocaleDateString()})
-                </option>
+                <div 
+                  key={req._id}
+                  onClick={() => handleSelectRequest({ target: { value: req._id } })}
+                  style={{
+                    padding: '1rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: `2px solid ${selectedRequest?._id === req._id ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                    backgroundColor: selectedRequest?._id === req._id ? 'rgba(37, 99, 235, 0.05)' : 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: selectedRequest?._id === req._id ? '0 4px 12px rgba(37, 99, 235, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                    {req.originalFaculty.name}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Owes you for: {req.subject} on {new Date(req.date).toLocaleDateString()}
+                  </div>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           {selectedRequest && (
